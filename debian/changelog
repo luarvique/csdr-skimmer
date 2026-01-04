@@ -1,3 +1,9 @@
+csdr-skimmer (1.6) stable; urgency=low
+
+  * Greatly improved RTTY skimmer.
+
+ -- Marat Fayzullin <luarvique@gmail.com>  Mon, 5 Jan 2026 12:18:02 -0000
+
 csdr-skimmer (1.5) stable; urgency=low
 
   * Renamed package to csdr-skimmer.

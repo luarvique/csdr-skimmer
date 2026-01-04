@@ -21,7 +21,7 @@
 #define AVG_SECONDS  (3)
 #define NEIGH_WEIGHT (0.5)
 #define THRES_WEIGHT (6.0)
-#define RTTY_WEIGHT  (4.0)
+#define RTTY_WEIGHT  (2.0)
 
 unsigned int sampleRate = 48000; // Input audio sampling rate
 unsigned int printChars = 8;     // Number of characters to print at once
@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
   bdotDecoder = new Csdr::BufferedModule<unsigned char, unsigned char> *[MAX_CHANNELS];
 
   // This is our baud rate in samples
-  unsigned int baudStep = floor(sampleRate / baudRate);
+  unsigned int baudStep = floor(2.0 * sampleRate / baudRate);
 
   // RTTY bits are collected here
   int inLevel[MAX_CHANNELS] = {0};
@@ -309,12 +309,14 @@ int main(int argc, char *argv[])
       inCount[j] += MAX_INPUT;
       inLevel[j] += state * n;
 
+#if 0
       // Resync if cannot determine the signal level
-//      if(abs(inLevel[j]) < MAX_INPUT)
-//      {
-//        inCount[j] = MAX_INPUT;
-//        inLevel[j] = state * MAX_INPUT;
-//      }
+      if(abs(inLevel[j]) < MAX_INPUT)
+      {
+        inCount[j] = MAX_INPUT;
+        inLevel[j] = state * MAX_INPUT;
+      }
+#endif
 
       // Once enough data accumulated...
       if(inCount[j]<baudStep)

@@ -309,7 +309,7 @@ int main(int argc, char *argv[])
       inCount[j] += MAX_INPUT;
       inLevel[j] += state * n;
 
-#if 0
+#if 1
       // Resync if cannot determine the signal level
       if(abs(inLevel[j]) < MAX_INPUT)
       {

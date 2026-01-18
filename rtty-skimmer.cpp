@@ -313,7 +313,7 @@ int main(int argc, char *argv[])
       inLevel[j] += state * n;
 
       // Keep track of the SnR
-      snr[j] = fmax(fmax(power0, power1) / avgPower, snr[j] * 0.99);
+      snr[j] = fmax(fmax(power0, power1) / avgPower, snr[j] * 0.9);
 
       // Resync if cannot determine the signal level
       if(abs(inLevel[j]) < MAX_INPUT)

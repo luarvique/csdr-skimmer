@@ -31,6 +31,7 @@ Csdr::Ringbuffer<unsigned char> **out;
 Csdr::RingbufferReader<unsigned char> **outReader;
 Csdr::BufferedModule<float, unsigned char> **cwDecoder;
 unsigned int *outState;
+float *snr;
 
 // Print output from ith decoder
 void printOutput(FILE *outFile, int i, unsigned int freq, unsigned int printChars)
@@ -40,7 +41,7 @@ void printOutput(FILE *outFile, int i, unsigned int freq, unsigned int printChar
   if(n<printChars) return;
 
   // Print frequency
-  fprintf(outFile, "%d:", freq);
+  fprintf(outFile, "%d:%d:", freq, (int)(20.0 * log10f(snr[i])));
 
   // Print characters
   unsigned char *p = outReader[i]->getReadPointer();
@@ -183,6 +184,7 @@ int main(int argc, char *argv[])
   outReader = new Csdr::RingbufferReader<unsigned char> *[MAX_CHANNELS];
   cwDecoder = new Csdr::BufferedModule<float, unsigned char> *[MAX_CHANNELS];
   outState  = new unsigned int[MAX_CHANNELS];
+  snr       = new float[MAX_CHANNELS];
 
   // Debug output gets accumulated here
   char dbgOut[MAX_CHANNELS+16];
@@ -195,6 +197,7 @@ int main(int argc, char *argv[])
     cwDecoder[j] = new Csdr::BufferedModule<float, unsigned char>(new Csdr::CwDecoder<float>(sampleRate, showCw), printChars*4);
     cwDecoder[j]->setWriter(out[j]);
     outState[j] = ' ';
+    snr[j] = 0.0;
   }
 
   // Read and decode input
@@ -297,6 +300,9 @@ int main(int argc, char *argv[])
 
       dbgOut[j] = accPower<0.5? '.' : '0' + round(fmax(fmin(accPower / maxPower * 10.0, 9.0), 0.0));
 
+      // Keep track of the SnR
+      snr[j] = fmax(power / avgPower, snr[j] * 0.99);
+
       // If CW input buffer can accept samples...
       Csdr::Ringbuffer<float> *in = cwDecoder[j]->buf();
       if(in->writeable()>=MAX_INPUT)
@@ -347,6 +353,7 @@ int main(int argc, char *argv[])
   delete [] outReader;
   delete [] cwDecoder;
   delete [] outState;
+  delete [] snr;
 
   // Done
   return(0);

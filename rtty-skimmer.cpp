@@ -35,6 +35,7 @@ Csdr::Ringbuffer<unsigned char> **out;
 Csdr::RingbufferReader<unsigned char> **outReader;
 Csdr::BufferedModule<unsigned char, unsigned char> **bdotDecoder;
 Csdr::BufferedModule<float, unsigned char> **rttyDecoder;
+float *snr;
 
 #if USE_TEST
 static const char *testRtty =
@@ -50,7 +51,7 @@ void printOutput(FILE *outFile, int i, unsigned int freq, unsigned int printChar
   if(n<printChars) return;
 
   // Print frequency
-  fprintf(outFile, "%d:", freq);
+  fprintf(outFile, "%d:%d:", freq, (int)(20.0 * log10f(snr[i])));
 
   // Print characters
   unsigned char *p = outReader[i]->getReadPointer();
@@ -171,6 +172,7 @@ int main(int argc, char *argv[])
   outReader   = new Csdr::RingbufferReader<unsigned char> *[MAX_CHANNELS];
   rttyDecoder = new Csdr::BufferedModule<float, unsigned char> *[MAX_CHANNELS];
   bdotDecoder = new Csdr::BufferedModule<unsigned char, unsigned char> *[MAX_CHANNELS];
+  snr         = new float[MAX_CHANNELS];
 
   // This is our baud rate in samples
   unsigned int baudStep = floor(2.0 * sampleRate / baudRate);
@@ -191,6 +193,7 @@ int main(int argc, char *argv[])
     bdotDecoder[j] = new Csdr::BufferedModule<unsigned char, unsigned char>(new Csdr::BaudotDecoder(), printChars*4);
     rttyDecoder[j]->connect(bdotDecoder[j]);
     bdotDecoder[j]->setWriter(out[j]);
+    snr[j] = 0.0;
   }
 
   // Read and decode input
@@ -309,14 +312,15 @@ int main(int argc, char *argv[])
       inCount[j] += MAX_INPUT;
       inLevel[j] += state * n;
 
-#if 1
+      // Keep track of the SnR
+      snr[j] = fmax(fmax(power0, power1) / avgPower, snr[j] * 0.99);
+
       // Resync if cannot determine the signal level
       if(abs(inLevel[j]) < MAX_INPUT)
       {
         inCount[j] = MAX_INPUT;
         inLevel[j] = state * MAX_INPUT;
       }
-#endif
 
       // Once enough data accumulated...
       if(inCount[j]<baudStep)
@@ -409,6 +413,7 @@ int main(int argc, char *argv[])
   delete [] outReader;
   delete [] rttyDecoder;
   delete [] bdotDecoder;
+  delete [] snr;
 
   // Done
   return(0);

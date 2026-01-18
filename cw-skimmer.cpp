@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
       dbgOut[j] = accPower<0.5? '.' : '0' + round(fmax(fmin(accPower / maxPower * 10.0, 9.0), 0.0));
 
       // Keep track of the SnR
-      snr[j] = fmax(power / avgPower, snr[j] - (snr[j] - 1.0) * 0.95);
+      snr[j] = fmax(power / avgPower, snr[j] - (snr[j] - 1.0) * 0.05);
 
       // If CW input buffer can accept samples...
       Csdr::Ringbuffer<float> *in = cwDecoder[j]->buf();

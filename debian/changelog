@@ -1,3 +1,9 @@
+csdr-skimmer (1.7) stable; urgency=low
+
+  * Added SnR computation and reporting.
+
+ -- Marat Fayzullin <luarvique@gmail.com>  Mon, 19 Jan 2026 12:18:02 -0000
+
 csdr-skimmer (1.6) stable; urgency=low
 
   * Greatly improved RTTY skimmer.

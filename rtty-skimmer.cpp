@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
 
       // Keep track of the SnR
       power0 = fmax(fmax(fftOut[j][0], fftOut[j+2][0]) / avgPower, 1.0);
-      snr[j] += (power0 - snr[j]) * (power0 >= snr[j]? 0.2 : 0.05);
+      snr[j] += (power0 - snr[j]) * (power0 >= snr[j]? 0.25 : 0.05);
 
       // Show data by channel, for debugging purposes
       dbgOut[j] = state > 0? '>' : state < 0? '<' : power1 >= avgPower*THRES_WEIGHT? '=' : '.';

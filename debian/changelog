@@ -1,3 +1,11 @@
+csdr-skimmer (1.8) stable; urgency=low
+
+  * Fixed frequencies reported for CW and RTTY.
+  * Fixed SnR computation for RTTY.
+  * Improved SnR computation for CW.
+
+ -- Marat Fayzullin <luarvique@gmail.com>  Tue, 3 Feb 2026 12:18:02 -0000
+
 csdr-skimmer (1.7) stable; urgency=low
 
   * Added SnR computation and reporting.

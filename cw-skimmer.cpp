@@ -301,7 +301,8 @@ int main(int argc, char *argv[])
       dbgOut[j] = accPower<0.5? '.' : '0' + round(fmax(fmin(accPower / maxPower * 10.0, 9.0), 0.0));
 
       // Keep track of the SnR
-      snr[j] = fmax(power / avgPower, snr[j] - (snr[j] - 1.0) * 0.05);
+      power = fmax(power / avgPower, 1.0);
+      snr[j] += (power - snr[j]) * (power >= snr[j]? 0.2 : 0.05);
 
       // If CW input buffer can accept samples...
       Csdr::Ringbuffer<float> *in = cwDecoder[j]->buf();
@@ -316,7 +317,7 @@ int main(int argc, char *argv[])
         while(cwDecoder[j]->canProcess()) cwDecoder[j]->process();
 
         // Print output
-        printOutput(outFile, j, j * sampleRate / 2 / MAX_CHANNELS, printChars);
+        printOutput(outFile, j, j * sampleRate / MAX_CHANNELS, printChars);
       }
     }
 
@@ -327,7 +328,7 @@ int main(int argc, char *argv[])
 
   // Final printout
   for(j=0 ; j<MAX_CHANNELS ; j++)
-    printOutput(outFile, j, j * sampleRate / 2 / MAX_CHANNELS, 1);
+    printOutput(outFile, j, j * sampleRate / MAX_CHANNELS, 1);
 
   // Close files
   if(outFile!=stdout) fclose(outFile);

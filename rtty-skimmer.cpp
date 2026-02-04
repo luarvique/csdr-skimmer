@@ -276,33 +276,37 @@ int main(int argc, char *argv[])
 #if USE_AVG_RATIO
     // Divide channel signal by the average power
     for(j=0 ; j<MAX_CHANNELS ; ++j)
-      fftOut[j][0] = fmax(1.0, fftOut[j][0] / fmax(avgPower, 10.0*FLT_MIN));
+      fftOut[j][1] = fmax(1.0, fftOut[j][0] / fmax(avgPower, 10.0*FLT_MIN));
 #elif USE_AVG_BOTTOM
     // Subtract average power from the channel signal
     for(j=0 ; j<MAX_CHANNELS ; ++j)
-      fftOut[j][0] = fmax(0.0, fftOut[j][0] - avgPower);
+      fftOut[j][1] = fmax(0.0, fftOut[j][0] - avgPower);
 #elif USE_THRESHOLD
     // Convert channel signal to 1/0 values based on threshold
     for(j=0 ; j<MAX_CHANNELS ; ++j)
-      fftOut[j][0] = fftOut[j][0] >= avgPower*THRES_WEIGHT? 1.0 : 0.0;
+      fftOut[j][1] = fftOut[j][0] >= avgPower*THRES_WEIGHT? 1.0 : 0.0;
 #endif
 
 #if USE_TEST
     // Run test RTTY sequence on the first decoder
-    fftOut[0][0] = (testRtty[x]=='1')!=invert? 0.5 : 5.0;
-    fftOut[2][0] = 5.0 - fftOut[0][0];
+    fftOut[0][1] = (testRtty[x]=='1')!=invert? 0.5 : 5.0;
+    fftOut[2][1] = 5.0 - fftOut[0][1];
 #endif
 
     // Decode by channel
     for(j=0 ; j<MAX_CHANNELS-2 ; ++j)
     {
-      float power0 = fftOut[j][0];
-      float power1 = fftOut[j+2][0];
+      float power0 = fftOut[j][1];
+      float power1 = fftOut[j+2][1];
 
       int state =
           power1 > RTTY_WEIGHT * power0? 1
         : power0 > RTTY_WEIGHT * power1? -1
         : 0;
+
+      // Keep track of the SnR
+      power0 = fmax(fmax(fftOut[j][0], fftOut[j+2][0]) / avgPower, 1.0);
+      snr[j] += (power0 - snr[j]) * (power0 >= snr[j]? 0.2 : 0.05);
 
       // Show data by channel, for debugging purposes
       dbgOut[j] = state > 0? '>' : state < 0? '<' : power1 >= avgPower*THRES_WEIGHT? '=' : '.';
@@ -311,9 +315,6 @@ int main(int argc, char *argv[])
       n = inCount[j] + MAX_INPUT > baudStep? baudStep - inCount[j] : MAX_INPUT;
       inCount[j] += MAX_INPUT;
       inLevel[j] += state * n;
-
-      // Keep track of the SnR
-      snr[j] = fmax(fmax(power0, power1) / avgPower, snr[j] - (snr[j] - 1.0) * 0.05);
 
       // Resync if cannot determine the signal level
       if(abs(inLevel[j]) < MAX_INPUT)
@@ -365,7 +366,7 @@ int main(int argc, char *argv[])
             rttyDecoder[j]->processAll();
             bdotDecoder[j]->processAll();
             // Print output
-            printOutput(outFile, j, (int)round((j + 1) * bandWidth / 2.0 + bandWidth / 4.0), printChars);
+            printOutput(outFile, j, (int)round((j + 1) * bandWidth), printChars);
           }
           else
           {
@@ -386,8 +387,8 @@ int main(int argc, char *argv[])
   }
 
   // Final printout
-  for(j=0 ; j<MAX_CHANNELS ; j++)
-    printOutput(outFile, j, j * sampleRate / 2 / MAX_CHANNELS, 1);
+  for(j=0 ; j<MAX_CHANNELS-2 ; j++)
+    printOutput(outFile, j, (int)round((j + 1) * bandWidth), 1);
 
   // Close files
   if(outFile!=stdout) fclose(outFile);

@@ -11,8 +11,8 @@
 
 #define USE_NEIGHBORS  0 // 1: Subtract neighbors from each FFT bucket
 #define USE_AVG_BOTTOM 0 // 1: Subtract average value from each bucket
-#define USE_AVG_RATIO  1 // 1: Divide each bucket by average value
-#define USE_THRESHOLD  0 // 1: Convert each bucket to 0.0/1.0 values
+#define USE_AVG_RATIO  0 // 1: Divide each bucket by average value
+#define USE_THRESHOLD  1 // 1: Convert each bucket to 0.0/1.0 values
 #define USE_TEST       0 // 1: Run test RTTY sequence
 
 #define MAX_SCALES   (16)
@@ -309,7 +309,7 @@ int main(int argc, char *argv[])
       snr[j] += (power0 - snr[j]) * (power0 >= snr[j]? 0.25 : 0.05);
 
       // Show data by channel, for debugging purposes
-      dbgOut[j] = state > 0? '>' : state < 0? '<' : power1 >= avgPower*THRES_WEIGHT? '=' : '.';
+      dbgOut[j] = state > 0? '>' : state < 0? '<' : power0 >= THRES_WEIGHT? '=' : '.';
 
       // Accumulate state data
       n = inCount[j] + MAX_INPUT > baudStep? baudStep - inCount[j] : MAX_INPUT;

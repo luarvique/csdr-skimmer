@@ -10,10 +10,6 @@
 #include <math.h>
 
 #define USE_NEIGHBORS  0 // 1: Subtract neighbors from each FFT bucket
-#define USE_AVG_BOTTOM 0 // 1: Subtract average value from each bucket
-#define USE_AVG_RATIO  0 // 1: Divide each bucket by average value
-#define USE_THRESHOLD  1 // 1: Convert each bucket to 0.0/1.0 values
-#define USE_TEST       0 // 1: Run test RTTY sequence
 
 #define MAX_SCALES   (16)
 #define MAX_INPUT    (sampleRate/(bandWidth/2))
@@ -36,12 +32,6 @@ Csdr::RingbufferReader<unsigned char> **outReader;
 Csdr::BufferedModule<unsigned char, unsigned char> **bdotDecoder;
 Csdr::BufferedModule<float, unsigned char> **rttyDecoder;
 float *snr;
-
-#if USE_TEST
-static const char *testRtty =
-// A      B      C      D      E
-  "01100010100111001110101001010100001";
-#endif
 
 // Print output from ith decoder
 void printOutput(FILE *outFile, int i, unsigned int freq, unsigned int printChars)
@@ -273,26 +263,6 @@ int main(int argc, char *argv[])
     accPower /= n;
     avgPower += (accPower - avgPower) * MAX_INPUT / sampleRate / AVG_SECONDS;
 
-#if USE_AVG_RATIO
-    // Divide channel signal by the average power
-    for(j=0 ; j<MAX_CHANNELS ; ++j)
-      fftOut[j][1] = fmax(1.0, fftOut[j][0] / fmax(avgPower, 10.0*FLT_MIN));
-#elif USE_AVG_BOTTOM
-    // Subtract average power from the channel signal
-    for(j=0 ; j<MAX_CHANNELS ; ++j)
-      fftOut[j][1] = fmax(0.0, fftOut[j][0] - avgPower);
-#elif USE_THRESHOLD
-    // Convert channel signal to 1/0 values based on threshold
-    for(j=0 ; j<MAX_CHANNELS ; ++j)
-      fftOut[j][1] = fftOut[j][0] >= avgPower*THRES_WEIGHT? 1.0 : 0.0;
-#endif
-
-#if USE_TEST
-    // Run test RTTY sequence on the first decoder
-    fftOut[0][1] = (testRtty[x]=='1')!=invert? 0.5 : 5.0;
-    fftOut[2][1] = 5.0 - fftOut[0][1];
-#endif
-
     // Decode by channel
     for(j=0 ; j<MAX_CHANNELS-2 ; ++j)
     {
@@ -339,11 +309,6 @@ int main(int argc, char *argv[])
         // This is the remaining time
         inCount[j] -= baudStep;
         inLevel[j]  = n * inCount[j];
-
-#if USE_TEST
-        // Advance test RTTY sequence
-        if(!j && !testRtty[++x]) { x = y; y = (y + 1) & 15; }
-#endif
 
         // Show data by channel, for debugging purposes
         dbgOut[j] = state > 0? '1' : state < 0? '0' : '?';

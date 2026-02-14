@@ -1,3 +1,11 @@
+csdr-skimmer (1.9) stable; urgency=low
+
+  * Much better RTTY skimmer.
+  * Made RTTY require minimum signal level.
+  * Made RTTY use 2x7 bits to sync.
+
+ -- Marat Fayzullin <luarvique@gmail.com>  Mon, 16 Feb 2026 12:18:02 -0000
+
 csdr-skimmer (1.8) stable; urgency=low
 
   * Fixed frequencies reported for CW and RTTY.

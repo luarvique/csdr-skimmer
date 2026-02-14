@@ -20,7 +20,7 @@
 #define MAX_CHANNELS (MAX_INPUT/2)
 #define AVG_SECONDS  (3)
 #define NEIGH_WEIGHT (0.5)
-#define THRES_WEIGHT (6.0)
+#define THRES_WEIGHT (4.0)//(6.0)
 #define RTTY_WEIGHT  (2.0)
 
 unsigned int sampleRate = 48000; // Input audio sampling rate
@@ -296,13 +296,17 @@ int main(int argc, char *argv[])
     // Decode by channel
     for(j=0 ; j<MAX_CHANNELS-2 ; ++j)
     {
-      float power0 = fftOut[j][1];
-      float power1 = fftOut[j+2][1];
+      float power0 = fftOut[j][0];
+      float power1 = fftOut[j+2][0];
 
+      // At least one side has to be above the avgPower * THRES_WEIGHT
+      // and the other side has to be RTTY_WEIGHT times less
       int state =
-          power1 > RTTY_WEIGHT * power0? 1
+          fmax(power0, power1) < avgPower*THRES_WEIGHT? 0
+        : power1 > RTTY_WEIGHT * power0? 1
         : power0 > RTTY_WEIGHT * power1? -1
         : 0;
+
 
       // Keep track of the SnR
       power0 = fmax(fmax(fftOut[j][0], fftOut[j+2][0]) / avgPower, 1.0);
@@ -355,12 +359,12 @@ int main(int argc, char *argv[])
         *(in->getWritePointer()) = state>0? 1.0 : 0.0;
         in->advance(1);
 
-        // If collected at least 7 bits...
-        if(inReader->available()>=7)
+        // If collected at least 14 bits...
+        if(inReader->available()>=14)
         {
-          // ...and these bits are 1xxxxx0...
+          // ...and these bits are 1xxxxx01xxxxx0...
           float *data = inReader->getReadPointer();
-          if((data[0]!=data[6]) && ((data[0]<data[6])!=invert))
+          if((data[0]!=data[6]) && ((data[0]<data[6])!=invert) && (data[7]==data[0]) && (data[13]==data[6]))
           {
             // Process input character
             rttyDecoder[j]->processAll();

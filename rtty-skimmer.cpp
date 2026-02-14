@@ -272,14 +272,14 @@ int main(int argc, char *argv[])
       // At least one side has to be above the avgPower * THRES_WEIGHT
       // and the other side has to be RTTY_WEIGHT times less
       int state =
-          fmax(power0, power1) < avgPower*THRES_WEIGHT? 0
+          fmax(power0, power1) < avgPower * THRES_WEIGHT? 0
         : power1 > RTTY_WEIGHT * power0? 1
         : power0 > RTTY_WEIGHT * power1? -1
         : 0;
 
 
       // Keep track of the SnR
-      power0 = fmax(fmax(fftOut[j][0], fftOut[j+2][0]) / avgPower, 1.0);
+      power0 = fmax(fmax(power0, power1) / avgPower, 1.0);
       snr[j] += (power0 - snr[j]) * (power0 >= snr[j]? 0.25 : 0.05);
 
       // Show data by channel, for debugging purposes

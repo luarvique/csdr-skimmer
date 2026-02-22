@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
         break;
       case 'r':
         sampleRate = j<argc-1? atoi(argv[++j]) : sampleRate;
-        sampleRate = sampleRate<8000? 8000 : sampleRate>48000? 48000 : sampleRate;
+        sampleRate = sampleRate<8000? 8000 : sampleRate>384000? 384000 : sampleRate;
         break;
       case 'i':
         use16bit = true;
@@ -143,8 +143,8 @@ int main(int argc, char *argv[])
       case 'h':
         fprintf(stderr, "CSDR-Based CW Skimmer by Marat Fayzullin\n");
         fprintf(stderr, "Usage: %s [options] [<infile> [<outfile>]]\n", argv[0]);
-        fprintf(stderr, "  -r <rate>  -- Use given sampling rate.\n");
-        fprintf(stderr, "  -n <chars> -- Number of characters to print.\n");
+        fprintf(stderr, "  -r <rate>  -- Use given sampling rate (8000..384000, default 48000).\n");
+        fprintf(stderr, "  -n <chars> -- Number of characters to print (1..32, default 8).\n");
         fprintf(stderr, "  -i         -- Use 16bit signed integer input.\n");
         fprintf(stderr, "  -f         -- Use 32bit floating point input.\n");
         fprintf(stderr, "  -c         -- Print dits and dahs to STDOUT.\n");
@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
         while(cwDecoder[j]->canProcess()) cwDecoder[j]->process();
 
         // Print output
-        printOutput(outFile, j, j * sampleRate / MAX_CHANNELS, printChars);
+        printOutput(outFile, j, j * BANDWIDTH, printChars);
       }
     }
 
@@ -328,7 +328,7 @@ int main(int argc, char *argv[])
 
   // Final printout
   for(j=0 ; j<MAX_CHANNELS ; j++)
-    printOutput(outFile, j, j * sampleRate / MAX_CHANNELS, 1);
+    printOutput(outFile, j, j * BANDWIDTH, 1);
 
   // Close files
   if(outFile!=stdout) fclose(outFile);

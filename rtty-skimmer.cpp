@@ -12,7 +12,7 @@
 #define USE_NEIGHBORS  0 // 1: Subtract neighbors from each FFT bucket
 
 #define MAX_SCALES   (16)
-#define MAX_INPUT    (sampleRate/(bandWidth/2))
+#define MAX_INPUT    (sampleRate/bandWidth)
 #define MAX_CHANNELS (MAX_INPUT/2)
 #define AVG_SECONDS  (3)
 #define NEIGH_WEIGHT (0.5)
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
         break;
       case 'r':
         sampleRate = j<argc-1? atoi(argv[++j]) : sampleRate;
-        sampleRate = sampleRate<8000? 8000 : sampleRate>48000? 48000 : sampleRate;
+        sampleRate = sampleRate<8000? 8000 : sampleRate>384000? 384000 : sampleRate;
         break;
       case 'w':
         bandWidth = j<argc-1? atoi(argv[++j]) : bandWidth;
@@ -120,12 +120,12 @@ int main(int argc, char *argv[])
       case 'h':
         fprintf(stderr, "CSDR-Based RTTY Skimmer by Marat Fayzullin\n");
         fprintf(stderr, "Usage: %s [options] [<infile> [<outfile>]]\n", argv[0]);
-        fprintf(stderr, "  -r <rate>  -- Use given sampling rate.\n");
-        fprintf(stderr, "  -n <chars> -- Number of characters to print.\n");
+        fprintf(stderr, "  -r <rate>  -- Use given sampling rate (8000..384000, default 48000).\n");
+        fprintf(stderr, "  -n <chars> -- Number of characters to print (1..32, default 8).\n");
+        fprintf(stderr, "  -w <hertz> -- Use given bandwith (40..1000, default 170).\n");
+        fprintf(stderr, "  -b <baud>  -- Use given baud rate (10..600, default 45.45).\n");
         fprintf(stderr, "  -i         -- Use 16bit signed integer input.\n");
         fprintf(stderr, "  -f         -- Use 32bit floating point input.\n");
-        fprintf(stderr, "  -w <hertz> -- Use given bandwith (170Hz).\n");
-        fprintf(stderr, "  -b <baud>  -- Use given baud rate (45.45bd).\n");
         fprintf(stderr, "  -x         -- Exchange meanings of mark and space.\n");
         fprintf(stderr, "  -d         -- Print debug information to STDERR.\n");
         fprintf(stderr, "  -h         -- Print this help message.\n");
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
             rttyDecoder[j]->processAll();
             bdotDecoder[j]->processAll();
             // Print output
-            printOutput(outFile, j, (int)round((j + 1) * bandWidth), printChars);
+            printOutput(outFile, j, (j + 1) * bandWidth, printChars);
           }
           else
           {
@@ -357,7 +357,7 @@ int main(int argc, char *argv[])
 
   // Final printout
   for(j=0 ; j<MAX_CHANNELS-2 ; j++)
-    printOutput(outFile, j, (int)round((j + 1) * bandWidth), 1);
+    printOutput(outFile, j, (j + 1) * bandWidth, 1);
 
   // Close files
   if(outFile!=stdout) fclose(outFile);

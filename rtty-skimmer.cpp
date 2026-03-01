@@ -11,9 +11,7 @@
 
 #define USE_NEIGHBORS  0 // 1: Subtract neighbors from each FFT bucket
 
-#define MAX_SCALES   (16)
-#define MAX_INPUT    (sampleRate/(bandWidth/2))
-#define MAX_CHANNELS (MAX_INPUT/2)
+#define NUM_SCALES   (16)
 #define AVG_SECONDS  (3)
 #define NEIGH_WEIGHT (0.5)
 #define THRES_WEIGHT (4.0)//(6.0)
@@ -65,7 +63,7 @@ int main(int argc, char *argv[])
   {
     float power;
     int count;
-  } scales[MAX_SCALES];
+  } scales[NUM_SCALES];
 
   // Parse input arguments
   for(j=1, inName=outName=0, inFile=stdin, outFile=stdout ; j<argc ; ++j)
@@ -151,31 +149,35 @@ int main(int argc, char *argv[])
     return(1);
   }
 
-  // Allocate FFT plan, input, and output buffers
-  fftwf_complex *fftOut = new fftwf_complex[MAX_INPUT];
-  short *dataIn = new short[MAX_INPUT];
-  float *fftIn  = new float[MAX_INPUT];
-  fftwf_plan fft = fftwf_plan_dft_r2c_1d(MAX_INPUT, fftIn, fftOut, FFTW_ESTIMATE);
-
-  // Allocate CSDR object storage
-  out         = new Csdr::Ringbuffer<unsigned char> *[MAX_CHANNELS];
-  outReader   = new Csdr::RingbufferReader<unsigned char> *[MAX_CHANNELS];
-  rttyDecoder = new Csdr::BufferedModule<float, unsigned char> *[MAX_CHANNELS];
-  bdotDecoder = new Csdr::BufferedModule<unsigned char, unsigned char> *[MAX_CHANNELS];
-  snr         = new float[MAX_CHANNELS];
-
+  // This is how many samples we process at a time
+  unsigned int inputStep = sampleRate / (bandWidth/2);
+  // This is how many meaningful bandWidth/2 FFT buckets we have
+  unsigned int numChannels = inputStep / 2;
   // This is our baud rate in samples
   unsigned int baudStep = round(sampleRate / baudRate);
 
+  // Allocate FFT plan, input, and output buffers
+  fftwf_complex *fftOut = new fftwf_complex[inputStep];
+  short *dataIn = new short[inputStep];
+  float *fftIn  = new float[inputStep];
+  fftwf_plan fft = fftwf_plan_dft_r2c_1d(inputStep, fftIn, fftOut, FFTW_ESTIMATE);
+
+  // Allocate CSDR object storage
+  out         = new Csdr::Ringbuffer<unsigned char> *[numChannels];
+  outReader   = new Csdr::RingbufferReader<unsigned char> *[numChannels];
+  rttyDecoder = new Csdr::BufferedModule<float, unsigned char> *[numChannels];
+  bdotDecoder = new Csdr::BufferedModule<unsigned char, unsigned char> *[numChannels];
+  snr         = new float[numChannels];
+
   // RTTY bits are collected here
-  int inLevel[MAX_CHANNELS] = {0};
-  int inCount[MAX_CHANNELS] = {0};
+  int inLevel[numChannels] = {0};
+  int inCount[numChannels] = {0};
 
   // Debug output gets accumulated here
-  char dbgOut[MAX_CHANNELS+16];
+  char dbgOut[numChannels+16];
 
   // Create CSDR objects
-  for(j=0 ; j<MAX_CHANNELS ; ++j)
+  for(j=0 ; j<numChannels ; ++j)
   {
     out[j]         = new Csdr::Ringbuffer<unsigned char>(printChars*4);
     outReader[j]   = new Csdr::RingbufferReader<unsigned char>(out[j]);
@@ -192,54 +194,54 @@ int main(int argc, char *argv[])
     if(!use16bit)
     {
       // Read input data
-      if(fread(fftIn, sizeof(float), MAX_INPUT, inFile) != MAX_INPUT) break;
+      if(fread(fftIn, sizeof(float), inputStep, inFile) != inputStep) break;
     }
     else
     {
       // Read input data
-      if(fread(dataIn, sizeof(short), MAX_INPUT, inFile) != MAX_INPUT) break;
+      if(fread(dataIn, sizeof(short), inputStep, inFile) != inputStep) break;
       // Expand shorts to floats, normalizing them to [-1;1) range
-      for(j=0 ; j<MAX_INPUT ; ++j)
+      for(j=0 ; j<inputStep ; ++j)
         fftIn[j] = (float)dataIn[j] / 32768.0;
     }
 
     // Apply Hamming window
-    double hk = 2.0 * M_PI / (MAX_INPUT-1);
-    for(j=0 ; j<MAX_INPUT ; ++j)
+    double hk = 2.0 * M_PI / (inputStep-1);
+    for(j=0 ; j<inputStep ; ++j)
       fftIn[j] = fftIn[j] * (0.54 - 0.46 * cos(j * hk));
 
     // Compute FFT
     fftwf_execute(fft);
 
     // Go to magnitudes
-    for(j=0 ; j<MAX_CHANNELS ; ++j)
+    for(j=0 ; j<numChannels ; ++j)
       fftOut[j][0] = fftOut[j][1] = sqrt(fftOut[j][0]*fftOut[j][0] + fftOut[j][1]*fftOut[j][1]);
 
     // Filter out spurs
 #if USE_NEIGHBORS
-    fftOut[MAX_CHANNELS-1][0] = fmax(0.0, fftOut[MAX_CHANNELS-1][1] - NEIGH_WEIGHT * fftOut[MAX_CHANNELS-2][1]);
+    fftOut[numChannels-1][0] = fmax(0.0, fftOut[numChannels-1][1] - NEIGH_WEIGHT * fftOut[numChannels-2][1]);
     fftOut[0][0] = fmax(0.0, fftOut[0][1] - NEIGH_WEIGHT * fftOut[1][1]);
-    for(j=1 ; j<MAX_CHANNELS-1 ; ++j)
+    for(j=1 ; j<numChannels-1 ; ++j)
       fftOut[j][0] = fmax(0.0, fftOut[j][1] - 0.5 * NEIGH_WEIGHT * (fftOut[j-1][1] + fftOut[j+1][1]));
 #endif
 
     // Sort buckets into scales
     memset(scales, 0, sizeof(scales));
-    for(j=0, maxPower=0.0 ; j<MAX_CHANNELS ; ++j)
+    for(j=0, maxPower=0.0 ; j<numChannels ; ++j)
     {
       float v = fftOut[j][0];
       int scale = floor(log(v));
-      scale = scale<0? 0 : scale+1>=MAX_SCALES? MAX_SCALES-1 : scale+1;
+      scale = scale<0? 0 : scale+1>=NUM_SCALES? NUM_SCALES-1 : scale+1;
       maxPower = fmax(maxPower, v);
       scales[scale].power += v;
       scales[scale].count++;
     }
 
     // Find most populated scales and use them for ground power
-    for(i=0, n=0, accPower=0.0 ; i<MAX_SCALES-1 ; ++i)
+    for(i=0, n=0, accPower=0.0 ; i<NUM_SCALES-1 ; ++i)
     {
       // Look for the next most populated scale
-      for(k=i, j=i+1 ; j<MAX_SCALES ; ++j)
+      for(k=i, j=i+1 ; j<NUM_SCALES ; ++j)
         if(scales[j].count>scales[k].count) k = j;
       // If found, swap with current one
       if(k!=i)
@@ -254,17 +256,17 @@ int main(int argc, char *argv[])
       accPower += scales[i].power;
       n += scales[i].count;
       // Stop when we collect 1/2 of all buckets
-      if(n>=MAX_CHANNELS/2) break;
+      if(n>=numChannels/2) break;
     }
 
-//fprintf(stderr, "accPower = %f (%d buckets, %d%%)\n", accPower/n, i+1, 100*n*2/MAX_INPUT);
+//fprintf(stderr, "accPower = %f (%d buckets, %d%%)\n", accPower/n, i+1, 100*n*2/inputStep);
 
     // Maintain rolling average over AVG_SECONDS
     accPower /= n;
-    avgPower += (accPower - avgPower) * MAX_INPUT / sampleRate / AVG_SECONDS;
+    avgPower += (accPower - avgPower) * inputStep / sampleRate / AVG_SECONDS;
 
     // Decode by channel
-    for(j=0 ; j<MAX_CHANNELS-2 ; ++j)
+    for(j=0 ; j<numChannels-2 ; ++j)
     {
       float power0 = fftOut[j][0];
       float power1 = fftOut[j+2][0];
@@ -286,15 +288,15 @@ int main(int argc, char *argv[])
       dbgOut[j] = state > 0? '>' : state < 0? '<' : power0 >= THRES_WEIGHT? '=' : '.';
 
       // Accumulate state data
-      n = inCount[j] + MAX_INPUT > baudStep? baudStep - inCount[j] : MAX_INPUT;
-      inCount[j] += MAX_INPUT;
+      n = inCount[j] + inputStep > baudStep? baudStep - inCount[j] : inputStep;
+      inCount[j] += inputStep;
       inLevel[j] += state * n;
 
       // Resync if cannot determine the signal level
-      if(abs(inLevel[j]) < MAX_INPUT)
+      if(abs(inLevel[j]) < inputStep)
       {
-        inCount[j] = MAX_INPUT;
-        inLevel[j] = state * MAX_INPUT;
+        inCount[j] = inputStep;
+        inLevel[j] = state * inputStep;
       }
 
       // Once enough data accumulated...
@@ -356,7 +358,7 @@ int main(int argc, char *argv[])
   }
 
   // Final printout
-  for(j=0 ; j<MAX_CHANNELS-2 ; j++)
+  for(j=0 ; j<numChannels-2 ; ++j)
     printOutput(outFile, j, round((j + 1.5) * bandWidth / 2.0), 1);
 
   // Close files
@@ -370,7 +372,7 @@ int main(int argc, char *argv[])
   delete [] dataIn;
 
   // Release CSDR resources
-  for(j=0 ; j<MAX_CHANNELS ; ++j)
+  for(j=0 ; j<numChannels ; ++j)
   {
     delete outReader[j];
     delete out[j];

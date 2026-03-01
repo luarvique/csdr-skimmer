@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
             rttyDecoder[j]->processAll();
             bdotDecoder[j]->processAll();
             // Print output
-            printOutput(outFile, j, (j + 1) * bandWidth / 2, printChars);
+            printOutput(outFile, j, round((j + 1.5) * bandWidth / 2.0), printChars);
           }
           else
           {
@@ -357,7 +357,7 @@ int main(int argc, char *argv[])
 
   // Final printout
   for(j=0 ; j<MAX_CHANNELS-2 ; j++)
-    printOutput(outFile, j, (j + 1) * bandWidth / 2, 1);
+    printOutput(outFile, j, round((j + 1.5) * bandWidth / 2.0), 1);
 
   // Close files
   if(outFile!=stdout) fclose(outFile);

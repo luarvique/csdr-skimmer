@@ -12,7 +12,7 @@
 #define USE_NEIGHBORS  0 // 1: Subtract neighbors from each FFT bucket
 
 #define MAX_SCALES   (16)
-#define MAX_INPUT    (sampleRate/bandWidth)
+#define MAX_INPUT    (sampleRate/(bandWidth/2))
 #define MAX_CHANNELS (MAX_INPUT/2)
 #define AVG_SECONDS  (3)
 #define NEIGH_WEIGHT (0.5)
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
   snr         = new float[MAX_CHANNELS];
 
   // This is our baud rate in samples
-  unsigned int baudStep = floor(2.0 * sampleRate / baudRate);
+  unsigned int baudStep = floor(sampleRate / baudRate);
 
   // RTTY bits are collected here
   int inLevel[MAX_CHANNELS] = {0};

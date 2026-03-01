@@ -165,7 +165,6 @@ int main(int argc, char *argv[])
   snr         = new float[MAX_CHANNELS];
 
   // This is our baud rate in samples
-//  unsigned int baudStep = floor(sampleRate / baudRate);
   unsigned int baudStep = round(sampleRate / baudRate);
 
   // RTTY bits are collected here

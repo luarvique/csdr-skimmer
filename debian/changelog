@@ -1,3 +1,10 @@
+csdr-skimmer (1.11) stable; urgency=low
+
+  * Fixed RTTY baud step computation.
+  * Fixed RTTY frequency display.
+
+ -- Marat Fayzullin <luarvique@gmail.com>  Mon, 2 Mar 2026 12:18:02 -0000
+
 csdr-skimmer (1.10) stable; urgency=low
 
   * Fixed sample rate limit.

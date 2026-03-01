@@ -165,7 +165,8 @@ int main(int argc, char *argv[])
   snr         = new float[MAX_CHANNELS];
 
   // This is our baud rate in samples
-  unsigned int baudStep = floor(sampleRate / baudRate);
+//  unsigned int baudStep = floor(sampleRate / baudRate);
+  unsigned int baudStep = round(sampleRate / baudRate);
 
   // RTTY bits are collected here
   int inLevel[MAX_CHANNELS] = {0};
@@ -335,7 +336,7 @@ int main(int argc, char *argv[])
             rttyDecoder[j]->processAll();
             bdotDecoder[j]->processAll();
             // Print output
-            printOutput(outFile, j, (j + 1) * bandWidth, printChars);
+            printOutput(outFile, j, (j + 1) * bandWidth / 2, printChars);
           }
           else
           {
@@ -357,7 +358,7 @@ int main(int argc, char *argv[])
 
   // Final printout
   for(j=0 ; j<MAX_CHANNELS-2 ; j++)
-    printOutput(outFile, j, (j + 1) * bandWidth, 1);
+    printOutput(outFile, j, (j + 1) * bandWidth / 2, 1);
 
   // Close files
   if(outFile!=stdout) fclose(outFile);

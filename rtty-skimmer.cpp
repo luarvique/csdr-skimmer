@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
   }
 
   // This is how many samples we process at a time
-  unsigned int inputStep = sampleRate / (bandWidth/2);
+  unsigned int inputStep = sampleRate / (bandWidth / 2);
   // This is how many meaningful bandWidth/2 FFT buckets we have
   unsigned int numChannels = inputStep / 2;
   // This is our baud rate in samples
@@ -289,28 +289,28 @@ int main(int argc, char *argv[])
 
       // Accumulate state data
       n = inCount[j] + inputStep > baudStep? baudStep - inCount[j] : inputStep;
-      inCount[j] += inputStep;
+      inCount[j] += n;
       inLevel[j] += state * n;
 
       // Resync if cannot determine the signal level
-      if(abs(inLevel[j]) < inputStep)
+      if(abs(inLevel[j]) < inputStep / 2)
       {
         inCount[j] = inputStep;
         inLevel[j] = state * inputStep;
       }
 
       // Once enough data accumulated...
-      if(inCount[j]<baudStep)
+      if(inCount[j] < baudStep)
         state = 0;
       else
       {
         // This is our current state
-        n = state;
+        int lastState = state;
         state = inLevel[j];
 
         // This is the remaining time
-        inCount[j] -= baudStep;
-        inLevel[j]  = n * inCount[j];
+        inCount[j] = inputStep - n;
+        inLevel[j] = lastState * inCount[j];
 
         // Show data by channel, for debugging purposes
         dbgOut[j] = state > 0? '1' : state < 0? '0' : '?';

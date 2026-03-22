@@ -294,6 +294,7 @@ int main(int argc, char *argv[])
 
       // Resync if cannot determine the signal level
       if(abs(inLevel[j]) < inputStep / 2)
+//      if(abs(inLevel[j]) + baudStep - inCount[j] < baudStep / 2)
       {
         inCount[j] = inputStep;
         inLevel[j] = state * inputStep;
